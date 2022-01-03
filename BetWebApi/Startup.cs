@@ -1,4 +1,4 @@
-using BetWebApi.MatchOddData;
+using BetWebApi.Repositories;
 using BetWebApi.Models;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -42,27 +42,32 @@ namespace BetWebApi
                 c.IncludeXmlComments(xmlPath);
             });
 
-            services.AddDbContextPool<MatchOddContext>(options =>
-                options.UseSqlServer(Configuration.GetConnectionString("MatchOddContextConnectionString")));
-            services.AddScoped<IMatchOddData, SqlMatchOddData>();
+            services.AddDbContextPool<ApplicationDBContext>(options =>
+                options.UseSqlServer(Configuration.GetConnectionString("ApplicationDBContextConnectionString")));
+            services.AddScoped<IMatchRepository, MatchRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            using (var serviceScope = app.ApplicationServices.GetService<IServiceScopeFactory>().CreateScope())
+            {
+                var context = serviceScope.ServiceProvider.GetRequiredService<ApplicationDBContext>();
+                context.Database.EnsureCreated();
+            }
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
-                app.UseSwagger(c =>
-                {
-                    c.SerializeAsV2 = true;
-                });
-                app.UseSwaggerUI(c =>
-                {
-                    c.SwaggerEndpoint("/swagger/v1/swagger.json", "BetWebApi V1");
-                });
 
             }
+            app.UseSwagger(c =>
+            {
+                c.SerializeAsV2 = true;
+            });
+            app.UseSwaggerUI(c =>
+            {
+                c.SwaggerEndpoint("/swagger/v1/swagger.json", "BetWebApi V1");
+            });
 
             app.UseRouting();
 
